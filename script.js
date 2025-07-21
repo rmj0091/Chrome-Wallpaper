@@ -513,7 +513,7 @@ saveBtn.addEventListener("click", function () {
         return showNotification("변경 전과 이름이 같아요.", "y");
     if (!username) return showNotification("이름을 공백할 수 없어요.", "y");
     localStorage.setItem("username", JSON.stringify(input.value));
-    showNotification("이름이 성공적으로 변경했어요.", "g");
+    showNotification("이름이 성공적으로 변경됬어요.", "g");
     username = input.value;
 });
 
