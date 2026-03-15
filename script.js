@@ -122,28 +122,27 @@ function renderHistorySuggestions(items, query = "") {
 
     container.classList.remove("hidden")
 
-    const list = []
-    if (hasQuery) {
-        list.push({
-            id: "google-search",
-            query,
-            title: `Google에서 “${query}” 검색`,
-            url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-            isSearch: true,
-            lastVisitTime: Date.now(),
-        })
-    }
+    const googleSearchItem = hasQuery
+        ? {
+              id: "google-search",
+              query,
+              title: `Google에서 “${query}” 검색`,
+              url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+              isSearch: true,
+              lastVisitTime: Date.now(),
+          }
+        : null
 
     const historyItems = (items || [])
         .filter(Boolean)
         .sort((a, b) => (b.lastVisitTime || 0) - (a.lastVisitTime || 0))
 
     const seenUrls = new Set()
-    if (hasQuery)
-        seenUrls.add(
-            `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-        )
+    if (googleSearchItem) {
+        seenUrls.add(googleSearchItem.url)
+    }
 
+    const list = []
     historyItems.forEach((item) => {
         const url = item.url || ""
         if (!url || seenUrls.has(url)) return
@@ -151,7 +150,15 @@ function renderHistorySuggestions(items, query = "") {
         list.push(item)
     })
 
-    const maxItems = hasQuery ? 7 : 7
+    // google.com/search 도메인은 우선순위 상위로 정렬
+    list.sort((a, b) => {
+        const aIsGoogle = a.url?.startsWith("https://www.google.com/search")
+        const bIsGoogle = b.url?.startsWith("https://www.google.com/search")
+        if (aIsGoogle !== bIsGoogle) return aIsGoogle ? -1 : 1
+        return (b.lastVisitTime || 0) - (a.lastVisitTime || 0)
+    })
+
+    const maxItems = 7
     list.splice(maxItems)
 
     const getItemIcon = (item) => {
@@ -169,42 +176,52 @@ function renderHistorySuggestions(items, query = "") {
         }
     }
 
+    // 구글 검색 항목은 항상 최상단에 표시
+    if (googleSearchItem) {
+        const entry = document.createElement("div")
+        entry.className = "item"
+        entry.innerHTML = `
+            <span class="item-icon material-symbols-outlined">search</span>
+            <div class="item-text">
+                <div class="item-title">${googleSearchItem.title}</div>
+            </div>
+        `
+        entry.addEventListener("click", () => {
+            const input = $("search")
+            input.value = googleSearchItem.query
+            performSearch(googleSearchItem.query)
+            renderHistorySuggestions([], "")
+        })
+        container.appendChild(entry)
+    }
+
     list.forEach((item) => {
         const url = item.url || ""
         const title = item.title || url
         const entry = document.createElement("div")
         entry.className = "item"
 
-        if (item.isSearch) {
-            entry.innerHTML = `
-                <span class="item-icon material-symbols-outlined">search</span>
-                <div class="item-text">
-                    <div class="item-title">${title}</div>
-                </div>
-            `
-        } else {
-            const isGoogleSearchUrl = url.startsWith(
-                "https://www.google.com/search",
-            )
-            const faviconUrl = createFavicon(url)
+        const isGoogleSearchUrl = url.startsWith(
+            "https://www.google.com/search",
+        )
+        const faviconUrl = createFavicon(url)
 
-            entry.innerHTML = `
-                ${
-                    isGoogleSearchUrl
-                        ? '<span class="item-icon material-symbols-outlined">history</span>'
-                        : `<img class="item-icon favicon" src="${faviconUrl}" alt="" />`
-                }
-                <div class="item-text">
-                    <div class="item-title">${title}</div>
-                    ${isGoogleSearchUrl ? "" : `<div class="item-url">${url}</div>`}
-                </div>
-            `
-        }
+        entry.innerHTML = `
+            ${
+                isGoogleSearchUrl
+                    ? '<span class="item-icon material-symbols-outlined">history</span>'
+                    : `<img class="item-icon favicon" src="${faviconUrl}" alt="" />`
+            }
+            <div class="item-text">
+                <div class="item-title">${title}</div>
+                ${isGoogleSearchUrl ? "" : `<div class="item-url">${url}</div>`}
+            </div>
+        `
 
         entry.addEventListener("click", () => {
             const input = $("search")
-            input.value = item.isSearch ? query : url
-            performSearch(item.isSearch ? query : url)
+            input.value = url
+            performSearch(url)
             renderHistorySuggestions([], "")
         })
 
