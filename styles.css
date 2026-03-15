@@ -82,11 +82,13 @@ body {
 
 .search-box {
     margin-bottom: 40%;
+    position: relative;
 }
 .search-box input {
-    padding: 5px 20px;
+    padding: 12px 24px;
     width: 500px;
-    max-width: 90%;
+
+    max-width: 640px;
     font-size: 18px;
     border: none;
     border-radius: 30px;
@@ -95,6 +97,135 @@ body {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     text-align: center;
+}
+
+.history-suggestions {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 640px;
+    max-height: 260px;
+    overflow: auto;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    padding: 8px 0;
+    z-index: 100;
+}
+
+.history-suggestions.hidden {
+    display: none;
+}
+
+.history-suggestions .item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    border-left: 4px solid transparent;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.history-suggestions .item-remove {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 18px;
+}
+
+.history-suggestions .item-remove:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.history-suggestions .item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(26, 115, 232, 0.7);
+}
+
+.history-suggestions .item:active {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.history-suggestions .item-icon {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.8);
+    flex-shrink: 0;
+    font-size: 20px;
+}
+
+.history-suggestions .item-icon.favicon {
+    border-radius: 4px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.history-suggestions .item-text {
+    overflow: hidden;
+}
+
+.history-suggestions .item-title {
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-suggestions .item-url {
+    font-size: 13px;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-suggestions .item .item-text {
+    overflow: hidden;
+}
+
+.history-suggestions .item .item-title {
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-suggestions .item .item-url {
+    font-size: 13px;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-suggestions .item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.history-suggestions .item:active {
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .search-box input::placeholder {
@@ -128,7 +259,10 @@ a:hover {
 }
 
 .material-symbols-outlined {
-    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0,
+    font-variation-settings:
+        "FILL" 0,
+        "wght" 400,
+        "GRAD" 0,
         "opsz" calc(20 * var(--scale));
 }
 
@@ -201,8 +335,8 @@ a:hover {
     top: -100%;
     right: -100%;
     background: #333;
-    height: calc(29px * var(--scale));
-    width: calc(29px * var(--scale));
+    height: calc(20px * var(--scale));
+    width: calc(20px * var(--scale));
     display: flex;
     align-items: center;
     display: none;
@@ -219,7 +353,7 @@ a:hover {
 }
 
 #shortcutContainer .link .removeLink:hover {
-    background: #ff0000;
+    background: #ff3d3d;
 }
 
 #time {
@@ -334,17 +468,18 @@ a:hover {
     display: none;
 }
 #closeShortcut {
-    width: 25px;
-    height: 25px;
+    width: 28px;
+    height: 28px;
     border-radius: calc(4px * var(--scale));
-    background: #fff;
-    cursor: pointer;
-    background-color: #fff0;
+    background: rgba(255, 255, 255, 0);
     cursor: pointer;
     position: absolute;
-    top: 0;
-    right: 20px;
-    padding: 16px;
+    top: 8px;
+    right: 12px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .audioControlWrapper {
@@ -391,7 +526,9 @@ a:hover {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease;
 }
 
 .notification-container {
@@ -434,11 +571,30 @@ a:hover {
 
 .notification .close-btn {
     position: absolute;
-    top: 25%;
+    top: 50%;
     right: 10px;
+    transform: translateY(-50%);
     color: #000;
     cursor: pointer;
     font-weight: bold;
+}
+
+.notification .close-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+#closeShortcut .material-symbols-outlined {
+    font-size: 16px;
+}
+
+#shortcutContainer .link .removeLink .material-symbols-outlined {
+    font-size: 12px;
+    line-height: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes fadeIn {
@@ -474,7 +630,11 @@ a:hover {
     text-transform: none;
     white-space: nowrap;
     direction: ltr;
-    font-variation-settings: "opsz" 48, "wght" 100, "FILL" 0, "GRAD" 0;
+    font-variation-settings:
+        "opsz" 48,
+        "wght" 100,
+        "FILL" 0,
+        "GRAD" 0;
 }
 
 .settings-btn {

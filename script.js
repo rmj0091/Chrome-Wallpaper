@@ -1,532 +1,776 @@
-let play = localStorage.getItem("isPlaying") === "true"
-let user = JSON.parse(localStorage.getItem("username"))
-let username = user !== null ? user : ""
-let volume1 = localStorage.getItem("volume")
-let volume = volume1 !== null ? volume1 : 0.2
-let checkBox1 = localStorage.getItem("checkBox1") === "true"
-let isChaBirthday = false
-let isUserBirthday = false
-
-document.addEventListener("DOMContentLoaded", function () {
-    const audio = document.getElementById("bg-audio")
-    const button = document.getElementById("toggleButton")
-    const audioIcon = document.getElementById("audioIcon")
-    const volumeSlider = document.getElementById("volumeSlider")
-    const video = document.getElementById("bg-video")
-    const image = document.getElementById("bg-image")
-    const toggle = document.getElementById("toggleSwitch-1")
-
-    toggle.addEventListener("change", function () {
-        localStorage.setItem("checkBox1", this.checked)
-        if (this.checked) {
-            video.classList.add("hidden")
-            image.classList.remove("hidden")
-            createKoreanGreeting(false)
-            if (localStorage.getItem("isPlaying") === "true")
-                showNotification(
-                    "완벽한 일반인 코스플레이를 위해 소리를 끄는 것도 잊지마세요!",
-                    "y",
-                    10,
-                )
-        } else {
-            video.classList.remove("hidden")
-            image.classList.add("hidden")
-            createKoreanGreeting(true)
-        }
-    })
-
-    toggle.checked = checkBox1
-    if (toggle.checked) {
-        video.classList.add("hidden")
-        image.classList.remove("hidden")
-        createKoreanGreeting(false)
-    } else {
-        createKoreanGreeting(true)
-    }
-
-    if (!audio || typeof audio.play !== "function") {
-        showNotification(
-            "사용하시는 브라우저가 오디오 태그를 지원하지 않아요.",
-            "r",
-            10,
-        )
-    }
-    if (!video || typeof video.play !== "function") {
-        showNotification(
-            "사용하시는 브라우저가 비디오 태그를 지원하지 않아요.",
-            "r",
-            10,
-        )
-    }
-
-    if (play) {
-        audio.play()
-        play = true
-        audioIcon.textContent = "volume_up"
-    } else {
-        audioIcon.textContent = "volume_off"
-    }
-
-    volumeSlider.value = volume
-    audio.volume = volume
-    document.getElementById("volumeText").textContent = `${Math.floor(
-        volume * 100,
-    )}%`
-
-    volumeSlider.addEventListener("input", function () {
-        audio.volume = volumeSlider.value
-        localStorage.setItem("volume", volumeSlider.value)
-        document.getElementById("volumeText").textContent = `${Math.floor(
-            audio.volume * 100,
-        )}%`
-    })
-
-    button.addEventListener("click", function () {
-        if (audio.paused) {
-            audio
-                .play()
-                .then(() => {
-                    localStorage.setItem("isPlaying", "true")
-                    audioIcon.textContent = "volume_up"
-                })
-                .catch((error) => {
-                    console.error("Audio Error", error)
-                })
-        } else {
-            audio.pause()
-            localStorage.setItem("isPlaying", "false")
-            audioIcon.textContent = "volume_off"
-        }
-    })
-
-    function updateClock() {
-        const now = new Date()
-        const hours = String(now.getHours()).padStart(2, "0")
-        const minutes = String(now.getMinutes()).padStart(2, "0")
-        const seconds = String(now.getSeconds()).padStart(2, "0")
-        document.getElementById("time").textContent =
-            `${hours}:${minutes}:${seconds}`
-        if (hours === "00" && minutes === "00" && seconds === "00") {
-            updateDate()
-        }
-    }
-
-    async function updateDate() {
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, "0")
-        const day = String(now.getDate()).padStart(2, "0")
-        const weekdays = [
-            "일요일",
-            "월요일",
-            "화요일",
-            "수요일",
-            "목요일",
-            "금요일",
-            "토요일",
-        ]
-        const weekday = weekdays[now.getDay()]
-        document.getElementById("date").textContent =
-            `${year}.${month}.${day} ${weekday}`
-
-        const res = await fetch("./config.json")
-        const data = await res.json()
-        const charBirthday = data.charBirthday
-        const userBirthday = data.userBirthday
-
-        if (
-            month === charBirthday.split("/")[0] &&
-            day === charBirthday.split("/")[1]
-        ) {
-            isChaBirthday = true
-            showNotification(
-                "오늘은 내 생일이야. 축하해줘!",
-                "🎉",
-                false,
-                "birthDay",
-            )
-        }
-        if (
-            month === userBirthday.split("/")[0] &&
-            day === userBirthday.split("/")[1]
-        ) {
-            isUserBirthday = true
-            showNotification(
-                `${username}님 생일 축하해요!`,
-                "🎉",
-                false,
-                "birthDay",
-            )
-        }
-    }
-
-    setInterval(updateClock, 1000)
-    updateClock()
-    updateDate()
-
-    const searchInput = document.getElementById("search")
-    searchInput.addEventListener("keypress", function (e) {
-        if (e.key === "Enter") {
-            showNotification(searchInput.value.startsWith("http"))
-            const urlRegex = /^(http|https):\/\/[\w\-]+(\.[\w\-]+)+[/#?]?.*$/
-            if (urlRegex.test(searchInput.value))
-                return (window.location.href = searchInput.value)
-
-            const query = encodeURIComponent(searchInput.value.trim())
-            if (query) {
-                return (window.location.href = `https://www.google.com/search?q=${query}`)
-            }
-        }
-    })
-})
-
-const links = [
-    { name: "Github", url: "https://github.com" },
-    { name: "Youtube", url: "https://www.youtube.com" },
-    { name: "X", url: "https://x.com" },
-]
-
-let storedLinks = JSON.parse(localStorage.getItem("shortcuts"))
-let shortcutData = storedLinks !== null ? storedLinks : links
-
-function createShortcuts() {
-    const container = document.getElementById("shortcutContainer")
-    const closeBtn = document.getElementById("closeShortcut")
-    const form = document.getElementById("addShortcut")
-    const nameInput = document.getElementById("addName")
-    const urlInput = document.getElementById("addUrl")
-    const addBtn = document.getElementById("appendShortcut")
-
-    container.innerHTML = ""
-
-    shortcutData.forEach((link) => {
-        const element = document.createElement("div")
-        element.className = "link"
-        element.innerHTML = `
-            <a href="${link.url}" rel="noopener noreferrer" title="${
-                link.url
-            }" class="shortcutLink">
-            ${
-                navigator.onLine
-                    ? `<img src="https://www.google.com/s2/favicons?domain=${link.url}&sz=48" />`
-                    : `<img style="background-color: $fff0; border: none;" />`
-            }
-                
-                <p>${link.name}</p>
-            </a>
-            <a class="removeLink" title="Delete ${
-                link.name
-            } shortcut" data-url="${link.url}">
-                <span class="material-symbols-outlined">close</span>
-            </a>
-        `
-        container.appendChild(element)
-    })
-
-    const addElement = document.createElement("div")
-    addElement.className = "link"
-    addElement.innerHTML = `
-        <a id="createShortcut" title="Add new shortcut" class="shortcutLink">
-            <span class="material-symbols-outlined">add</span>
-            <p>Add</p>
-        </a>
-    `
-    container.appendChild(addElement)
-
-    document.getElementById("createShortcut").onclick = function () {
-        form.classList.toggle("flex")
-        form.classList.toggle("none")
-    }
-
-    closeBtn.onclick = function () {
-        form.classList.toggle("none")
-        form.classList.toggle("flex")
-    }
-
-    addBtn.onclick = function () {
-        let name = nameInput.value.trim()
-        let url = urlInput.value.trim()
-        if (name && url) {
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                return showNotification("유료한 링크를 기입해주세요.", "y")
-            }
-            shortcutData.push({ name, url })
-            localStorage.setItem("shortcuts", JSON.stringify(shortcutData))
-            form.classList.toggle("flex")
-            form.classList.toggle("none")
-            createShortcuts()
-            nameInput.value = ""
-            urlInput.value = ""
-            const hasFinalConsonant = Hangul.endsWithConsonant(name)
-            const particle = hasFinalConsonant ? "이" : "가"
-            showNotification(`${name}${particle} 추가되었습니다.`, "g")
-        } else {
-            showNotification("이름과 링크를 모두 입력해주세요.", "y")
-        }
-    }
-
-    container.addEventListener("click", function (e) {
-        if (e.target.closest(".removeLink")) {
-            e.preventDefault()
-            const targetUrl = e.target
-                .closest(".removeLink")
-                .getAttribute("data-url")
-            shortcutData = shortcutData.filter((link) => link.url !== targetUrl)
-            localStorage.setItem("shortcuts", JSON.stringify(shortcutData))
-            createShortcuts()
-        }
-    })
+const STORAGE_KEYS = {
+    IS_PLAYING: "isPlaying",
+    USERNAME: "username",
+    VOLUME: "volume",
+    SHORTCUTS: "shortcuts",
+    IMAGE_MODE: "checkBox1",
+    SEARCH_HISTORY: "searchHistory",
 }
 
-createShortcuts()
+const DEFAULTS = {
+    VOLUME: 0.2,
+    SHORTCUTS: [
+        { name: "Github", url: "https://github.com" },
+        { name: "Youtube", url: "https://www.youtube.com" },
+        { name: "X", url: "https://x.com" },
+    ],
+}
 
-if (!username) {
-    let username = prompt("당신의 이름을 알려주시겠어요?").slice(0, 5)
-    if (username) {
-        localStorage.setItem("username", JSON.stringify(username))
-        showNotification(
-            `${username}님 안녕하세요!<a href="https://youtube.com">aa</a>`,
-            "b",
-        )
-    } else {
-        fetch("./config.json")
-            .then((res) => res.json())
-            .then((greetings) => {
-                username = greetings.defaultName
-                localStorage.setItem("username", JSON.stringify(username))
-                showNotification(`${username}님 안녕하세요!`, "b")
-            })
+const state = {
+    isPlaying: localStorage.getItem(STORAGE_KEYS.IS_PLAYING) === "true",
+    volume:
+        parseFloat(localStorage.getItem(STORAGE_KEYS.VOLUME)) ||
+        DEFAULTS.VOLUME,
+    isImageMode: localStorage.getItem(STORAGE_KEYS.IMAGE_MODE) === "true",
+    username: "",
+    isChaBirthday: false,
+    isUserBirthday: false,
+}
+
+const $ = (id) => document.getElementById(id)
+
+function safeParseJSON(value, fallback) {
+    try {
+        return value ? JSON.parse(value) : fallback
+    } catch {
+        return fallback
     }
 }
 
-async function createKoreanGreeting(bo) {
-    if (!bo) return (document.getElementById("greeting").textContent = "")
-    const res = await fetch("./config.json")
-    const greetings = await res.json()
+function setStorage(key, value) {
+    localStorage.setItem(key, value)
+}
 
-    const now = new Date()
-    const hour = now.getHours()
+function setStorageJSON(key, value) {
+    localStorage.setItem(key, JSON.stringify(value))
+}
 
-    let greetingList
-    if (hour >= 5 && hour < 12) {
-        greetingList = greetings.morning
-    } else if (hour >= 12 && hour < 18) {
-        greetingList = greetings.afternoon
-    } else {
-        greetingList = greetings.evening
-    }
+async function loadConfig() {
+    if (window.__configCache) return window.__configCache
+    const response = await fetch("./config.json")
+    window.__configCache = await response.json()
+    return window.__configCache
+}
 
-    const randomGreeting =
-        greetingList[Math.floor(Math.random() * greetingList.length)]
+function isValidUrl(value) {
+    const urlRegex = /^(https?):\/\/[\w\-]+(\.[\w\-]+)+[/#?]?.*$/
+    return urlRegex.test(value)
+}
 
-    document.getElementById("greeting").textContent = randomGreeting.replace(
-        "${username}",
-        username,
+function fetchHistory(query) {
+    return new Promise((resolve, reject) => {
+        if (!chrome?.runtime?.sendMessage) {
+            reject(new Error("Chrome runtime messaging is not available"))
+            return
+        }
+
+        chrome.runtime.sendMessage(
+            { type: "getHistory", query },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message))
+                    return
+                }
+                resolve(response?.results || [])
+            },
+        )
+    })
+}
+
+function getSearchHistory() {
+    return safeParseJSON(localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY), [])
+}
+
+function addSearchHistory(term) {
+    const value = term.trim()
+    if (!value) return
+
+    const items = getSearchHistory().filter(
+        (t) => t.toLowerCase() !== value.toLowerCase(),
+    )
+    items.unshift(value)
+    localStorage.setItem(
+        STORAGE_KEYS.SEARCH_HISTORY,
+        JSON.stringify(items.slice(0, 20)),
     )
 }
 
-async function showNotification(msg, data = "w", time = 5, type) {
-    let text = ""
-    let color = ""
-    const container = document.getElementById("notification-container")
+function performSearch(value) {
+    if (!value) return
+    if (isValidUrl(value)) {
+        window.location.href = value
+        return
+    }
 
-    const notification = document.createElement("div")
-    notification.className = "notification"
-    if (data === "w") {
-        color = "background-color: #fff;"
+    addSearchHistory(value)
+    const query = encodeURIComponent(value)
+    window.location.href = `https://www.google.com/search?q=${query}`
+}
+
+function renderHistorySuggestions(items, query = "") {
+    const container = $("historySuggestions")
+    if (!container) return
+
+    container.innerHTML = ""
+    const hasQuery = Boolean(query?.trim())
+    const hasItems = Array.isArray(items) && items.length > 0
+
+    if (!hasQuery && !hasItems) {
+        container.classList.add("hidden")
+        return
     }
-    if (data === "y") {
-        color = "background-color: #FFEB3B;"
-    } else if (data === "b") {
-        color = "background-color: #2196F3;"
-    } else if (data === "g") {
-        color = "background-color: #4CAF50;"
-    } else if (data === "r") {
-        color = "background-color: #F44336;"
-    } else {
-        text = data
+
+    container.classList.remove("hidden")
+
+    const list = []
+    if (hasQuery) {
+        list.push({
+            id: "google-search",
+            query,
+            title: `Google에서 “${query}” 검색`,
+            url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+            isSearch: true,
+            lastVisitTime: Date.now(),
+        })
     }
-    if (type) {
-        if (type === "birthDay") {
+
+    const historyItems = (items || [])
+        .filter(Boolean)
+        .sort((a, b) => (b.lastVisitTime || 0) - (a.lastVisitTime || 0))
+
+    const seenUrls = new Set()
+    if (hasQuery)
+        seenUrls.add(
+            `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+        )
+
+    historyItems.forEach((item) => {
+        const url = item.url || ""
+        if (!url || seenUrls.has(url)) return
+        seenUrls.add(url)
+        list.push(item)
+    })
+
+    const maxItems = hasQuery ? 7 : 7
+    list.splice(maxItems)
+
+    const getItemIcon = (item) => {
+        if (item.isSearch) return "search"
+        if (item.lastVisitTime) return "history"
+        return "public"
+    }
+
+    const createFavicon = (url) => {
+        try {
+            const hostname = new URL(url).hostname
+            return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+        } catch {
+            return ""
         }
     }
 
-    const statusDot = `<span class="status-dot" style="${color}">${text}</span>`
+    list.forEach((item) => {
+        const url = item.url || ""
+        const title = item.title || url
+        const entry = document.createElement("div")
+        entry.className = "item"
+
+        if (item.isSearch) {
+            entry.innerHTML = `
+                <span class="item-icon material-symbols-outlined">search</span>
+                <div class="item-text">
+                    <div class="item-title">${title}</div>
+                </div>
+            `
+        } else {
+            const isGoogleSearchUrl = url.startsWith(
+                "https://www.google.com/search",
+            )
+            const faviconUrl = createFavicon(url)
+
+            entry.innerHTML = `
+                ${
+                    isGoogleSearchUrl
+                        ? '<span class="item-icon material-symbols-outlined">history</span>'
+                        : `<img class="item-icon favicon" src="${faviconUrl}" alt="" />`
+                }
+                <div class="item-text">
+                    <div class="item-title">${title}</div>
+                    ${isGoogleSearchUrl ? "" : `<div class="item-url">${url}</div>`}
+                </div>
+            `
+        }
+
+        entry.addEventListener("click", () => {
+            const input = $("search")
+            input.value = item.isSearch ? query : url
+            performSearch(item.isSearch ? query : url)
+            renderHistorySuggestions([], "")
+        })
+
+        container.appendChild(entry)
+    })
+}
+
+function formatPercent(value) {
+    return `${Math.round(value * 100)}%`
+}
+
+function setImageMode(enabled) {
+    const video = $("bg-video")
+    const image = $("bg-image")
+
+    state.isImageMode = Boolean(enabled)
+    setStorage(STORAGE_KEYS.IMAGE_MODE, state.isImageMode)
+
+    if (state.isImageMode) {
+        video?.classList.add("hidden")
+        image?.classList.remove("hidden")
+        createGreeting(false)
+        if (state.isPlaying) {
+            showNotification(
+                "완벽한 일반인 코스플레이를 위해 소리를 끄는 것도 잊지마세요!",
+                "warning",
+                10,
+            )
+        }
+    } else {
+        video?.classList.remove("hidden")
+        image?.classList.add("hidden")
+        createGreeting(true)
+    }
+}
+
+function showNotification(message, variant = "default", duration = 5) {
+    const container = $("notification-container")
+    if (!container) return
+
+    const colorMap = {
+        default: "#fff",
+        warning: "#FFEB3B",
+        info: "#2196F3",
+        success: "#4CAF50",
+        error: "#F44336",
+    }
+
+    const color = colorMap[variant] || variant
+    const notification = document.createElement("div")
+    notification.className = "notification"
 
     notification.innerHTML = `
-        ${statusDot}
+        <span class="status-dot" style="background-color: ${color}"></span>
         <span class="close-btn">
             <span class="material-symbols-outlined">close</span>
         </span>
-        ${msg}
+        ${message}
     `
 
     notification
         .querySelector(".close-btn")
-        .addEventListener("click", function () {
-            notification.remove()
-        })
+        ?.addEventListener("click", () => notification.remove())
 
-    container.appendChild(notification)
-    if (isChaBirthday || isUserBirthday) {
-        notification.addEventListener("click", function (e) {
-            if (e.target.closest(".close-btn")) return
-            confetti({
-                particleCount: 1000,
-                spread: 200,
-                origin: { y: 0.5 },
-            })
+    if (state.isChaBirthday || state.isUserBirthday) {
+        notification.addEventListener("click", (event) => {
+            if (event.target.closest(".close-btn")) return
+            confetti({ particleCount: 1000, spread: 200, origin: { y: 0.5 } })
         })
     }
 
-    if (time !== false) {
+    container.appendChild(notification)
+
+    if (duration !== false) {
         setTimeout(() => {
             notification.style.animation = "fadeOut 0.5s forwards"
-            setTimeout(() => {
-                notification.remove()
-            }, 500)
-        }, time * 1000)
+            setTimeout(() => notification.remove(), 500)
+        }, duration * 1000)
     }
 }
 
-function updateStatus() {
+function updateOnlineStatus() {
     showNotification(
         navigator.onLine
             ? "네트워크에 다시 연결되었어요."
             : "네트워크 연결이 끊어졌어요.",
-        navigator.onLine ? "g" : "r",
+        navigator.onLine ? "success" : "error",
     )
 }
 
-if (!navigator.onLine) {
-    showNotification("네트워크에 연결되어 있지 않아요.", "r")
+function initAudioControls() {
+    const audio = $("bg-audio")
+    const audioIcon = $("audioIcon")
+    const volumeSlider = $("volumeSlider")
+    const volumeText = $("volumeText")
+    const playButton = $("toggleButton")
+
+    if (!audio || typeof audio.play !== "function") {
+        showNotification(
+            "사용하시는 브라우저가 오디오 태그를 지원하지 않아요.",
+            "error",
+            10,
+        )
+        return
+    }
+
+    audio.volume = state.volume
+    volumeSlider.value = state.volume
+    volumeText.textContent = formatPercent(state.volume)
+    audioIcon.textContent = state.isPlaying ? "volume_up" : "volume_off"
+
+    if (state.isPlaying) {
+        audio.play().catch((err) => console.error("Audio error:", err))
+    }
+
+    volumeSlider.addEventListener("input", () => {
+        state.volume = parseFloat(volumeSlider.value)
+        audio.volume = state.volume
+        volumeText.textContent = formatPercent(state.volume)
+        setStorage(STORAGE_KEYS.VOLUME, state.volume)
+    })
+
+    playButton.addEventListener("click", () => {
+        if (audio.paused) {
+            audio
+                .play()
+                .then(() => {
+                    audioIcon.textContent = "volume_up"
+                    state.isPlaying = true
+                    setStorage(STORAGE_KEYS.IS_PLAYING, "true")
+                })
+                .catch((err) => console.error("Audio error:", err))
+        } else {
+            audio.pause()
+            audioIcon.textContent = "volume_off"
+            state.isPlaying = false
+            setStorage(STORAGE_KEYS.IS_PLAYING, "false")
+        }
+    })
 }
 
-window.addEventListener("online", updateStatus)
-window.addEventListener("offline", updateStatus)
+async function updateClock() {
+    const now = new Date()
+    const hours = String(now.getHours()).padStart(2, "0")
+    const minutes = String(now.getMinutes()).padStart(2, "0")
+    const seconds = String(now.getSeconds()).padStart(2, "0")
 
-const settingsBtn = document.getElementById("settingsButton")
-const settingsPanel = document.getElementById("settingsPanel")
-const closeSettingsBtn = document.getElementById("closeSettings")
-const addShortcut = document.getElementById("addShortcut")
-
-settingsBtn.addEventListener("click", function () {
-    settingsPanel.classList.toggle("hidden")
-})
-
-closeSettingsBtn.addEventListener("click", function () {
-    settingsPanel.classList.toggle("hidden")
-})
-
-document.addEventListener("click", function (e) {
-    const content = document.getElementById("content")
-    const searchInput = document.getElementById("search")
-    const form = document.getElementById("addShortcut")
-    const addBtn = document.getElementById("createShortcut")
-    const fake = localStorage.getItem("checkBox1")
-    if (
-        !settingsPanel.classList.contains("hidden") &&
-        !settingsPanel.contains(e.target) &&
-        !settingsBtn.contains(e.target)
-    ) {
-        settingsPanel.classList.add("hidden")
+    $("time").textContent = `${hours}:${minutes}:${seconds}`
+    if (hours === "00" && minutes === "00" && seconds === "00") {
+        await updateDate()
     }
-    if (
-        !form.classList.contains("none") &&
-        !form.contains(e.target) &&
-        !addBtn.contains(e.target)
-    ) {
-        form.classList.toggle("none")
-        form.classList.toggle("flex")
-    }
-    if (
-        (content.contains(e.target) &&
-            !searchInput.contains(e.target) &&
-            !fake) ||
-        (e.target === document.getElementById("shortcutContainer") && !fake)
-    ) {
-        createKoreanGreeting(true)
-    }
-})
+}
 
-document.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-        const form = document.getElementById("addShortcut")
-        const nameInput = document.getElementById("addName")
-        const urlInput = document.getElementById("addUrl")
+async function updateDate() {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const day = String(now.getDate()).padStart(2, "0")
 
-        if (!addShortcut.classList.contains("none")) {
-            let name = nameInput.value.trim()
-            let url = urlInput.value.trim()
-            if (name && url) {
-                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    return showNotification("유료한 링크를 기입해주세요.", "y")
-                }
-                shortcutData.push({ name, url })
-                localStorage.setItem("shortcuts", JSON.stringify(shortcutData))
-                form.classList.toggle("flex")
-                form.classList.toggle("none")
-                createShortcuts()
-                nameInput.value = ""
-                urlInput.value = ""
-                const hasFinalConsonant = Hangul.endsWithConsonant(name)
-                const particle = hasFinalConsonant ? "이" : "가"
-                showNotification(`${name}${particle} 추가되었습니다.`, "g")
-            } else {
-                showNotification("이름과 링크를 모두 입력해주세요.", "y")
+    const weekdays = [
+        "일요일",
+        "월요일",
+        "화요일",
+        "수요일",
+        "목요일",
+        "금요일",
+        "토요일",
+    ]
+
+    $("date").textContent = `${year}.${month}.${day} ${weekdays[now.getDay()]}`
+
+    const config = await loadConfig()
+
+    const isToday = (value) => {
+        if (!value) return false
+        const [m, d] = value.split("/")
+        return month === m && day === d
+    }
+
+    if (isToday(config.charBirthday)) {
+        state.isChaBirthday = true
+        showNotification("오늘은 내 생일이야. 축하해줘!", "default", false)
+    }
+
+    if (isToday(config.userBirthday)) {
+        state.isUserBirthday = true
+        showNotification(`${state.username}님 생일 축하해요!`, "default", false)
+    }
+}
+
+async function createGreeting(show) {
+    const greetingEl = $("greeting")
+    if (!show) {
+        greetingEl.textContent = ""
+        return
+    }
+
+    const config = await loadConfig()
+    const hour = new Date().getHours()
+    const list =
+        hour >= 5 && hour < 12
+            ? config.morning
+            : hour < 18
+              ? config.afternoon
+              : config.evening
+
+    const raw = list[Math.floor(Math.random() * list.length)]
+    greetingEl.textContent = raw.replace("${username}", state.username)
+}
+
+function createShortcuts() {
+    const container = $("shortcutContainer")
+    const form = $("addShortcut")
+    const nameInput = $("addName")
+    const urlInput = $("addUrl")
+    const closeBtn = $("closeShortcut")
+    const appendBtn = $("appendShortcut")
+
+    const stored = safeParseJSON(
+        localStorage.getItem(STORAGE_KEYS.SHORTCUTS),
+        DEFAULTS.SHORTCUTS,
+    )
+
+    const shortcuts = Array.isArray(stored) ? stored : [...DEFAULTS.SHORTCUTS]
+
+    const saveShortcutData = (data) =>
+        setStorageJSON(STORAGE_KEYS.SHORTCUTS, data)
+
+    const toggleForm = (show) => {
+        form.classList.toggle("flex", show)
+        form.classList.toggle("none", !show)
+    }
+
+    const render = () => {
+        container.innerHTML = ""
+
+        shortcuts.forEach((link) => {
+            const element = document.createElement("div")
+            element.className = "link"
+            element.innerHTML = `
+                <a href="${link.url}" rel="noopener noreferrer" title="${link.url}" class="shortcutLink">
+                    ${
+                        navigator.onLine
+                            ? `<img src="https://www.google.com/s2/favicons?domain=${link.url}&sz=48" />`
+                            : `<img style="background-color: #fff0; border: none;" />`
+                    }
+                    <p>${link.name}</p>
+                </a>
+                <a class="removeLink" title="Delete ${link.name} shortcut" data-url="${link.url}">
+                    <span class="material-symbols-outlined">close</span>
+                </a>
+            `
+            container.appendChild(element)
+        })
+
+        const addElement = document.createElement("div")
+        addElement.className = "link"
+        addElement.innerHTML = `
+            <a id="createShortcut" title="Add new shortcut" class="shortcutLink">
+                <span class="material-symbols-outlined">add</span>
+                <p>Add</p>
+            </a>
+        `
+        container.appendChild(addElement)
+    }
+
+    const addShortcut = () => {
+        const name = nameInput.value.trim()
+        const url = urlInput.value.trim()
+
+        if (!name || !url) {
+            showNotification("이름과 링크를 모두 입력해주세요.", "warning")
+            return
+        }
+
+        if (!isValidUrl(url)) {
+            showNotification("유효한 링크를 입력해주세요.", "warning")
+            return
+        }
+
+        shortcuts.push({ name, url })
+        saveShortcutData(shortcuts)
+        toggleForm(false)
+        nameInput.value = ""
+        urlInput.value = ""
+        render()
+
+        const particle = Hangul.endsWithConsonant(name) ? "이" : "가"
+        showNotification(`${name}${particle} 추가되었습니다.`, "success")
+    }
+
+    const removeShortcut = (targetUrl) => {
+        const index = shortcuts.findIndex((link) => link.url === targetUrl)
+        if (index === -1) return
+        shortcuts.splice(index, 1)
+        saveShortcutData(shortcuts)
+        render()
+    }
+
+    container.addEventListener("click", (event) => {
+        const createBtn = event.target.closest("#createShortcut")
+        if (createBtn) {
+            toggleForm(true)
+            return
+        }
+
+        const removeButton = event.target.closest(".removeLink")
+        if (removeButton) {
+            event.preventDefault()
+            const targetUrl = removeButton.getAttribute("data-url")
+            removeShortcut(targetUrl)
+        }
+    })
+
+    closeBtn.addEventListener("click", () => toggleForm(false))
+    appendBtn.addEventListener("click", addShortcut)
+
+    render()
+}
+
+async function ensureUsername() {
+    const stored = safeParseJSON(
+        localStorage.getItem(STORAGE_KEYS.USERNAME),
+        "",
+    )
+    state.username = stored || ""
+
+    if (!state.username) {
+        const input = prompt("당신의 이름을 알려주시겠어요?")
+        if (input) {
+            state.username = input.slice(0, 5)
+            setStorageJSON(STORAGE_KEYS.USERNAME, state.username)
+            showNotification(`${state.username}님 안녕하세요!`, "info")
+        } else {
+            const config = await loadConfig()
+            state.username = config.defaultName
+            setStorageJSON(STORAGE_KEYS.USERNAME, state.username)
+        }
+    }
+}
+
+function initSettings() {
+    const settingsBtn = $("settingsButton")
+    const settingsPanel = $("settingsPanel")
+    const closeSettingsBtn = $("closeSettings")
+    const nameInput = $("nameInput")
+    const saveBtn = $("saveBtn")
+
+    nameInput.value = state.username
+
+    settingsBtn.addEventListener("click", () => {
+        settingsPanel.classList.toggle("hidden")
+    })
+
+    closeSettingsBtn.addEventListener("click", () => {
+        settingsPanel.classList.toggle("hidden")
+    })
+
+    function updateUsername(newName) {
+        state.username = newName
+        setStorageJSON(STORAGE_KEYS.USERNAME, newName)
+        nameInput.value = newName
+    }
+
+    function handleNameUpdate() {
+        const newName = nameInput.value.trim()
+        if (newName === state.username) {
+            showNotification("변경 전과 이름이 같아요.", "warning")
+            return
+        }
+        if (!newName) {
+            showNotification("이름을 공백할 수 없어요.", "warning")
+            return
+        }
+
+        const particle = Hangul.endsWithConsonant(newName) ? "으로" : "로"
+        updateUsername(newName)
+        showNotification(`이름을 ${newName}${particle} 변경했어요.`, "success")
+    }
+
+    nameInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            handleNameUpdate()
+        }
+    })
+
+    saveBtn.addEventListener("click", handleNameUpdate)
+}
+
+function removeSearchHistoryTerm(term) {
+    const items = getSearchHistory().filter(
+        (t) => t.toLowerCase() !== term.toLowerCase(),
+    )
+    localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(items))
+    return items
+}
+
+function renderSearchHistoryTerms(terms) {
+    const container = $("historySuggestions")
+    if (!container) return
+
+    container.innerHTML = ""
+
+    if (!Array.isArray(terms) || terms.length === 0) {
+        container.classList.add("hidden")
+        return
+    }
+
+    container.classList.remove("hidden")
+    terms.slice(0, 5).forEach((term) => {
+        const entry = document.createElement("div")
+        entry.className = "item"
+        entry.innerHTML = `
+            <span class="item-icon material-symbols-outlined">history</span>
+            <div class="item-text">
+                <div class="item-title">${term}</div>
+            </div>
+            <span class="item-remove material-symbols-outlined">close</span>
+        `
+
+        entry.addEventListener("click", (e) => {
+            if (e.target.closest(".item-remove")) return
+            const input = $("search")
+            input.value = term
+            performSearch(term)
+            renderHistorySuggestions([], "")
+        })
+
+        entry.querySelector(".item-remove").addEventListener("click", (e) => {
+            e.stopPropagation()
+            const remaining = removeSearchHistoryTerm(term)
+            renderSearchHistoryTerms(remaining)
+        })
+
+        container.appendChild(entry)
+    })
+}
+
+function initSearch() {
+    const searchInput = $("search")
+    const suggestions = $("historySuggestions")
+    let debounceTimer = null
+
+    const hideSuggestions = () => renderHistorySuggestions([], "")
+
+    const onSearch = (value) => {
+        hideSuggestions()
+        performSearch(value)
+    }
+
+    searchInput.addEventListener("input", () => {
+        const value = searchInput.value.trim()
+        if (!value) {
+            renderSearchHistoryTerms(getSearchHistory())
+            return
+        }
+
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(async () => {
+            try {
+                const results = await fetchHistory(value)
+                renderHistorySuggestions(results, value)
+            } catch {
+                hideSuggestions()
             }
+        }, 200)
+    })
+
+    searchInput.addEventListener("focus", () => {
+        if (!searchInput.value.trim()) {
+            renderSearchHistoryTerms(getSearchHistory())
         }
-    }
-})
+    })
 
-const input = document.getElementById("nameInput")
-const saveBtn = document.getElementById("saveBtn")
+    searchInput.addEventListener("keypress", (e) => {
+        if (e.key !== "Enter") return
+        const value = searchInput.value.trim()
+        if (!value) return
+        onSearch(value)
+    })
 
-input.value = username
-
-input.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
-        if (!settingsPanel.classList.contains("hidden")) {
-            if (username === input.value)
-                return showNotification("변경 전과 이름이 같아요.", "y")
-
-            if (!username)
-                return showNotification("이름을 공백할 수 없어요.", "y")
-
-            localStorage.setItem("username", JSON.stringify(input.value))
-            const hasFinalConsonant = Hangul.endsWithConsonant(input.value)
-            const particle = hasFinalConsonant ? "으로" : "로"
-            showNotification(
-                `이름을 ${input.value}${particle} 변경했어요.`,
-                "g",
-            )
-            username = input.value
+    searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            hideSuggestions()
         }
-    }
-})
-saveBtn.addEventListener("click", function () {
-    if (username === input.value)
-        return showNotification("변경 전과 이름이 같아요.", "y")
-    if (!username) return showNotification("이름을 공백할 수 없어요.", "y")
-    localStorage.setItem("username", JSON.stringify(input.value))
-    showNotification("이름이 성공적으로 변경됬어요.", "g")
-    username = input.value
-})
+    })
 
-document.addEventListener("dragstart", function (e) {
-    e.preventDefault()
-})
-
-document.addEventListener("selectstart", function (e) {
-    e.preventDefault()
-})
-
-window.onerror = (message, source, lineno, colno, error) => {
-    console.error(
-        `에러: ${message} @ ${source}:${lineno}:${colno}\n객체: ${error}`,
-    )
-    showNotification("에러가 발생했어요. 로그를 확인해주세요.", "r", 10)
+    // Close suggestions when clicking outside
+    document.addEventListener("click", (e) => {
+        if (
+            !searchInput.contains(e.target) &&
+            !suggestions.contains(e.target)
+        ) {
+            hideSuggestions()
+        }
+    })
 }
 
-const checkJsLoad = document.getElementById("checkJsLoad")
-checkJsLoad.remove()
+function initGlobalClickHandlers() {
+    const settingsPanel = $("settingsPanel")
+    const content = $("content")
+    const searchInput = $("search")
+    const shortcutForm = $("addShortcut")
+    const createShortcutBtn = $("createShortcut")
+
+    document.addEventListener("click", (e) => {
+        if (
+            settingsPanel &&
+            !settingsPanel.classList.contains("hidden") &&
+            !settingsPanel.contains(e.target) &&
+            !$("settingsButton").contains(e.target)
+        ) {
+            settingsPanel.classList.add("hidden")
+        }
+
+        if (
+            shortcutForm &&
+            !shortcutForm.classList.contains("none") &&
+            !shortcutForm.contains(e.target) &&
+            !createShortcutBtn.contains(e.target)
+        ) {
+            shortcutForm.classList.toggle("none")
+            shortcutForm.classList.toggle("flex")
+        }
+
+        if (content && !searchInput.contains(e.target) && !state.isImageMode) {
+            createGreeting(true)
+        }
+    })
+}
+
+function preventSelectionAndDrag() {
+    document.addEventListener("dragstart", (e) => e.preventDefault())
+    document.addEventListener("selectstart", (e) => e.preventDefault())
+}
+
+async function init() {
+    await ensureUsername()
+    initAudioControls()
+    initSettings()
+    initSearch()
+    initGlobalClickHandlers()
+    preventSelectionAndDrag()
+
+    const toggle = $("toggleSwitch-1")
+    if (toggle) {
+        toggle.checked = state.isImageMode
+        toggle.addEventListener("change", (e) => setImageMode(e.target.checked))
+        setImageMode(state.isImageMode)
+    }
+
+    await updateDate()
+    updateClock()
+    setInterval(updateClock, 1000)
+
+    createShortcuts()
+
+    if (!navigator.onLine) {
+        showNotification("네트워크에 연결되어 있지 않아요.", "error")
+    }
+
+    window.addEventListener("online", updateOnlineStatus)
+    window.addEventListener("offline", updateOnlineStatus)
+
+    const checkJsLoad = $("checkJsLoad")
+    checkJsLoad?.remove()
+}
+
+document.addEventListener("DOMContentLoaded", init)

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
     <head>
         <meta charset="UTF-8" />
         <title>새 탭</title>
@@ -30,10 +30,7 @@
         />
 
         <audio id="bg-audio" loop>
-            <source
-                src="./assets/ブルーアーカイブ Blue Archive OST 9. Midsummer Cat.mp3"
-                type="audio/mpeg"
-            />
+            <source src="./assets/midsummer-cat.mp3" type="audio/mpeg" />
             Your browser does not support the audio tag.
         </audio>
 
@@ -63,7 +60,7 @@
                     />
                     <p id="volumeText">100%</p>
                 </div>
-                <label class="toggle-wrapper">
+                <div class="toggle-wrapper">
                     <label class="switch">
                         <input
                             type="checkbox"
@@ -73,7 +70,7 @@
                         <span class="slider"></span>
                     </label>
                     <span>일반인 코스플레이</span>
-                </label>
+                </div>
                 <div class="nameWrapper">
                     <input
                         type="text"
@@ -104,6 +101,12 @@
                     placeholder="Google 검색 또는 URL 입력"
                     aria-live="polite"
                 />
+                <div
+                    id="historySuggestions"
+                    class="history-suggestions hidden"
+                    role="listbox"
+                    aria-label="검색 기록"
+                ></div>
             </div>
 
             <h1 id="greeting"></h1>
