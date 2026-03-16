@@ -646,16 +646,19 @@ a:hover {
     right: 20px;
     z-index: 1000;
     padding: 10px;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.2);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
-    height: 50px;
-    width: 50px;
+    height: 30px;
+    width: 30px;
     display: flex;
     justify-content: center;
     align-items: center;
+}
+.settings-btn .material-symbols-outlined {
+    font-size: 20px;
 }
 .settings-panel {
     position: fixed;

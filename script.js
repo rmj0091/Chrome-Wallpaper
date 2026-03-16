@@ -37,6 +37,27 @@ function safeParseJSON(value, fallback) {
     }
 }
 
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+}
+
+function highlightMatch(text, query) {
+    if (!query) return escapeHtml(text)
+
+    const escapedQuery = String(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const regex = new RegExp(escapedQuery, "gi")
+
+    return escapeHtml(text).replace(
+        regex,
+        (match) => `<strong>${match}</strong>`,
+    )
+}
+
 function setStorage(key, value) {
     localStorage.setItem(key, value)
 }
@@ -108,6 +129,8 @@ function performSearch(value) {
 }
 
 function renderHistorySuggestions(items, query = "") {
+    if (query.length === 0) renderSearchHistoryTerms(getSearchHistory())
+
     const container = $("historySuggestions")
     if (!container) return
 
@@ -180,10 +203,11 @@ function renderHistorySuggestions(items, query = "") {
     if (googleSearchItem) {
         const entry = document.createElement("div")
         entry.className = "item"
+        const titleHtml = highlightMatch(googleSearchItem.title, query)
         entry.innerHTML = `
             <span class="item-icon material-symbols-outlined">search</span>
             <div class="item-text">
-                <div class="item-title">${googleSearchItem.title}</div>
+                <div class="item-title">${titleHtml}</div>
             </div>
         `
         entry.addEventListener("click", () => {
@@ -198,6 +222,7 @@ function renderHistorySuggestions(items, query = "") {
     list.forEach((item) => {
         const url = item.url || ""
         const title = item.title || url
+        const titleHtml = highlightMatch(title, query)
         const entry = document.createElement("div")
         entry.className = "item"
 
@@ -213,7 +238,7 @@ function renderHistorySuggestions(items, query = "") {
                     : `<img class="item-icon favicon" src="${faviconUrl}" alt="" />`
             }
             <div class="item-text">
-                <div class="item-title">${title}</div>
+                <div class="item-title">${titleHtml}</div>
                 ${isGoogleSearchUrl ? "" : `<div class="item-url">${url}</div>`}
             </div>
         `
@@ -709,7 +734,6 @@ function initSearch() {
         }
     })
 
-    // Close suggestions when clicking outside
     document.addEventListener("click", (e) => {
         if (
             !searchInput.contains(e.target) &&
@@ -717,6 +741,22 @@ function initSearch() {
         ) {
             hideSuggestions()
         }
+    })
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "/") return
+
+        const active = document.activeElement
+        const isTypingInInput =
+            active &&
+            (active.tagName === "INPUT" ||
+                active.tagName === "TEXTAREA" ||
+                active.isContentEditable)
+
+        if (isTypingInInput) return
+
+        searchInput.focus()
+        e.preventDefault()
     })
 }
 
