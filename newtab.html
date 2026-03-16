@@ -16,21 +16,14 @@
         <div id="shortcutContainer"></div>
 
         <video id="bg-video" autoplay muted loop playsinline>
-            <source
-                src="./assets/kuromi-serika-with-cats-blue-archive-moewalls-com.mp4"
-                type="video/mp4"
-            />
+            <source src="./assets/wallpaper.mp4" type="video/mp4" />
             Your browser does not support the video tag.
         </video>
 
-        <img
-            id="bg-image"
-            class="bg-image hidden"
-            src="./assets/photo-1475274047050-1d0c0975c63e.png"
-        />
+        <img id="bg-image" class="bg-image hidden" src="./assets/image.png" />
 
         <audio id="bg-audio" loop>
-            <source src="./assets/midsummer-cat.mp3" type="audio/mpeg" />
+            <source src="./assets/audio.mp3" type="audio/mpeg" />
             Your browser does not support the audio tag.
         </audio>
 
@@ -81,6 +74,15 @@
                     />
                     <button id="saveBtn">변경</button>
                 </div>
+                <div class="downWrapper">
+                    <input
+                        type="text"
+                        id="downloadInput"
+                        placeholder=""
+                        value="https://moewalls.com/anime/shiroko-x-shiroko-terror-blue-archive-live-wallpaper"
+                    />
+                    <button id="downloadBtn">다운로드</button>
+                </div>
 
                 <p id="version">v1.1.0</p>
             </div>
@@ -128,6 +130,7 @@
         </div>
         <div id="checkJsLoad"></div>
     </body>
+
     <script src="./cdn/confetti.browser.min.js"></script>
     <script src="./cdn/hangul.min.js"></script>
     <script src="script.js"></script>
