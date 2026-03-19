@@ -1,24 +1,29 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.type !== "getHistory") return
+    if (message?.type === "getHistory") {
+        chrome.history.search(
+            {
+                text: message.query || "",
+                startTime: 0,
+                maxResults: 100,
+            },
+            (results) => {
+                const seen = new Set()
+                const uniqueResults = []
+                for (const item of results || []) {
+                    if (!item?.url) continue
+                    if (seen.has(item.url)) continue
+                    seen.add(item.url)
+                    uniqueResults.push(item)
+                }
+                sendResponse({ results: uniqueResults })
+            },
+        )
 
-    chrome.history.search(
-        {
-            text: message.query || "",
-            startTime: 0,
-            maxResults: 100,
-        },
-        (results) => {
-            const seen = new Set()
-            const uniqueResults = []
-            for (const item of results || []) {
-                if (!item?.url) continue
-                if (seen.has(item.url)) continue
-                seen.add(item.url)
-                uniqueResults.push(item)
-            }
-            sendResponse({ results: uniqueResults })
-        },
-    )
+        return true
+    } else if (message?.type === "getVersion") {
+        const manifest = chrome.runtime.getManifest()
 
-    return true
+        sendResponse({ version: manifest.version })
+        return true
+    }
 })

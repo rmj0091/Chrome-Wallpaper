@@ -4,6 +4,8 @@ const STORAGE_KEYS = {
     VOLUME: "volume",
     SHORTCUTS: "shortcuts",
     IMAGE_MODE: "checkBox1",
+    AUTO_UPDATE: "autoUpdateCheck",
+    GREETING_ENABLED: "greetingEnabled",
     SEARCH_HISTORY: "searchHistory",
 }
 
@@ -14,6 +16,8 @@ const DEFAULTS = {
         { name: "Youtube", url: "https://www.youtube.com" },
         { name: "X", url: "https://x.com" },
     ],
+    UPDATE_URL:
+        "https://raw.githubusercontent.com/rmj0091/Chrome-Wallpaper/refs/heads/main/manifest.json",
 }
 
 const state = {
@@ -22,6 +26,10 @@ const state = {
         parseFloat(localStorage.getItem(STORAGE_KEYS.VOLUME)) ||
         DEFAULTS.VOLUME,
     isImageMode: localStorage.getItem(STORAGE_KEYS.IMAGE_MODE) === "true",
+    isAutoUpdateEnabled:
+        localStorage.getItem(STORAGE_KEYS.AUTO_UPDATE) !== "false",
+    isGreetingEnabled:
+        localStorage.getItem(STORAGE_KEYS.GREETING_ENABLED) !== "false",
     username: "",
     isChaBirthday: false,
     isUserBirthday: false,
@@ -96,6 +104,52 @@ function fetchHistory(query) {
             },
         )
     })
+}
+
+function fetchVersion() {
+    return new Promise((resolve, reject) => {
+        if (!chrome?.runtime?.sendMessage) {
+            reject(new Error("Chrome runtime messaging is not available"))
+            return
+        }
+
+        chrome.runtime.sendMessage({ type: "getVersion" }, (response) => {
+            if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message))
+                return
+            }
+            resolve(response?.version || "Unknown")
+        })
+    })
+}
+
+function fetchLatestVersion() {
+    return fetch(DEFAULTS.UPDATE_URL)
+        .then((res) => res.json())
+        .then((data) => data.version)
+        .catch(() => null)
+}
+
+function checkUpdate() {
+    if (!state.isAutoUpdateEnabled) return
+
+    Promise.all([fetchVersion(), fetchLatestVersion()])
+        .then(([current, latest]) => {
+            if (!latest) {
+                return
+            }
+            if (current !== latest) {
+                showNotification(
+                    `새 버전이 출시되었어요! 현재 버전: ${current}, 최신 버전: ${latest}`,
+                    "info",
+                    15,
+                )
+            }
+        })
+        .catch((err) => {
+            showNotification("업데이트 확인 중 오류가 발생했어요.", "error")
+            console.log(err)
+        })
 }
 
 function getSearchHistory() {
@@ -439,7 +493,7 @@ async function updateDate() {
 
 async function createGreeting(show) {
     const greetingEl = $("greeting")
-    if (!show) {
+    if (!show || !state.isGreetingEnabled) {
         greetingEl.textContent = ""
         return
     }
@@ -806,11 +860,70 @@ async function init() {
     initGlobalClickHandlers()
     preventSelectionAndDrag()
 
+    try {
+        const v = await fetchVersion()
+        const latest = await fetchLatestVersion()
+
+        document.getElementById("version").textContent =
+            `v${v} - ${latest && v !== latest ? `최신버전: v${latest}` : "최신 버전이에요!"}`
+    } catch {
+        document.getElementById("version").textContent = "vUnknown"
+    }
+
     const toggle = $("toggleSwitch-1")
     if (toggle) {
         toggle.checked = state.isImageMode
         toggle.addEventListener("change", (e) => setImageMode(e.target.checked))
         setImageMode(state.isImageMode)
+    }
+
+    const updateToggle = $("toggleSwitch-update")
+    if (updateToggle) {
+        updateToggle.checked = state.isAutoUpdateEnabled
+        updateToggle.addEventListener("change", (e) => {
+            state.isAutoUpdateEnabled = e.target.checked
+            setStorage(
+                STORAGE_KEYS.AUTO_UPDATE,
+                state.isAutoUpdateEnabled ? "true" : "false",
+            )
+            showNotification(
+                state.isAutoUpdateEnabled
+                    ? "자동 업데이트 확인을 켰어요."
+                    : "자동 업데이트 확인을 껐어요.",
+                "info",
+                5,
+            )
+            if (state.isAutoUpdateEnabled) {
+                checkUpdate()
+            }
+        })
+    }
+
+    const greetingToggle = $("toggleSwitch-greeting")
+    if (greetingToggle) {
+        greetingToggle.checked = state.isGreetingEnabled
+        greetingToggle.addEventListener("change", (e) => {
+            state.isGreetingEnabled = e.target.checked
+            setStorage(
+                STORAGE_KEYS.GREETING_ENABLED,
+                state.isGreetingEnabled ? "true" : "false",
+            )
+            showNotification(
+                state.isGreetingEnabled ? "대사를 켰어요." : "대사를 껐어요.",
+                "info",
+                5,
+            )
+
+            if (state.isGreetingEnabled) {
+                createGreeting(true)
+            } else {
+                createGreeting(false)
+            }
+        })
+    }
+
+    if (state.isAutoUpdateEnabled) {
+        checkUpdate()
     }
 
     await updateDate()

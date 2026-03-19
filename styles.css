@@ -503,7 +503,7 @@ a:hover {
 
 .audioControlWrapper,
 .nameWrapper,
-.downWrapper {
+.footerWrapper {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -769,15 +769,6 @@ a:hover {
     box-sizing: border-box;
 }
 
-#downloadInput {
-    padding: 8px 12px;
-    font-size: 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    width: 65%;
-    box-sizing: border-box;
-}
-
 #saveBtn {
     padding: 10px 20px;
     font-size: 12px;
@@ -796,14 +787,4 @@ a:hover {
     position: absolute;
     bottom: 5px;
     left: 20px;
-}
-
-#downloadBtn {
-    padding: 10px 20px;
-    font-size: 12px;
-    background-color: #0275ff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
 }
