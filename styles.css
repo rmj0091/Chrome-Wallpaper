@@ -99,6 +99,16 @@ body {
     backdrop-filter: blur(14px);
     color: white;
     text-align: center;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+}
+
+input,
+textarea {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
 }
 
 .search-box input:focus {

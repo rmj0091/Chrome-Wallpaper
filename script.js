@@ -140,7 +140,7 @@ function checkUpdate() {
             }
             if (current !== latest) {
                 showNotification(
-                    `새 버전이 출시되었어요! 현재 버전: ${current}, 최신 버전: ${latest}`,
+                    `새 버전이 출시되었어요! 현재 버전: ${current}, 최신 버전: ${latest} <a href="https://github.com/rmj0091/Chrome-Wallpaper">다운로드</a>`,
                     "info",
                     15,
                 )
@@ -885,7 +885,23 @@ function initGlobalClickHandlers() {
 
 function preventSelectionAndDrag() {
     document.addEventListener("dragstart", (e) => e.preventDefault())
-    document.addEventListener("selectstart", (e) => e.preventDefault())
+    document.addEventListener("selectstart", (e) => {
+        const target = e.target
+        if (
+            !target ||
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable
+        ) {
+            return
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+            return
+        }
+
+        e.preventDefault()
+    })
 }
 
 async function initVersion() {
