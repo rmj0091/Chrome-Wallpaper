@@ -193,11 +193,13 @@ function renderHistorySuggestions(items, query = "") {
     const hasItems = Array.isArray(items) && items.length > 0
 
     if (!hasQuery && !hasItems) {
+        container.classList.remove("visible")
         container.classList.add("hidden")
         return
     }
 
     container.classList.remove("hidden")
+    container.classList.add("visible")
 
     const googleSearchItem = hasQuery
         ? {
@@ -323,12 +325,13 @@ function setImageMode(enabled) {
         video?.classList.add("hidden")
         image?.classList.remove("hidden")
         createGreeting(false)
-        if (state.isPlaying) {
-            showNotification(
-                "완벽한 일반인 코스플레이를 위해 소리를 끄는 것도 잊지마세요!",
-                "warning",
-                10,
-            )
+        const audio = $("bg-audio")
+
+        if (!audio.paused) {
+            audio.pause()
+            audioIcon.textContent = "volume_off"
+            state.isPlaying = false
+            setStorage(STORAGE_KEYS.IS_PLAYING, "false")
         }
     } else {
         video?.classList.remove("hidden")
@@ -688,6 +691,11 @@ function initSettings() {
     })
 
     saveBtn.addEventListener("click", handleNameUpdate)
+
+    $("removeAllSearch").addEventListener("click", () => {
+        removeAllSearchHistory()
+        showNotification("모든 검색 기록을 제거했어요.", "info", 5)
+    })
 }
 
 function removeSearchHistoryTerm(term) {
@@ -698,6 +706,11 @@ function removeSearchHistoryTerm(term) {
     return items
 }
 
+function removeAllSearchHistory() {
+    localStorage.removeItem(STORAGE_KEYS.SEARCH_HISTORY)
+    return true
+}
+
 function renderSearchHistoryTerms(terms) {
     const container = $("historySuggestions")
     if (!container) return
@@ -705,11 +718,13 @@ function renderSearchHistoryTerms(terms) {
     container.innerHTML = ""
 
     if (!Array.isArray(terms) || terms.length === 0) {
+        container.classList.remove("visible")
         container.classList.add("hidden")
         return
     }
 
     container.classList.remove("hidden")
+    container.classList.add("visible")
     terms.slice(0, 5).forEach((term) => {
         const entry = document.createElement("div")
         entry.className = "item"
@@ -744,7 +759,10 @@ function initSearch() {
     const suggestions = $("historySuggestions")
     let debounceTimer = null
 
-    const hideSuggestions = () => renderHistorySuggestions([], "")
+    const hideSuggestions = () => {
+        renderHistorySuggestions([], "")
+        searchInput.style.borderRadius = "30px"
+    }
 
     const onSearch = (value) => {
         hideSuggestions()
@@ -753,25 +771,43 @@ function initSearch() {
 
     searchInput.addEventListener("input", () => {
         const value = searchInput.value.trim()
+        const hasHistory = getSearchHistory().length > 0
+
+        clearTimeout(debounceTimer)
+
         if (!value) {
-            renderSearchHistoryTerms(getSearchHistory())
+            if (hasHistory) {
+                searchInput.style.borderRadius = "30px 30px 0 0"
+                renderSearchHistoryTerms(getSearchHistory())
+            } else {
+                searchInput.style.borderRadius = "30px"
+                renderHistorySuggestions([], "")
+            }
             return
         }
 
-        clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(async () => {
+        searchInput.style.borderRadius = "30px 30px 0 0"
+        ;(async () => {
             try {
                 const results = await fetchHistory(value)
                 renderHistorySuggestions(results, value)
             } catch {
                 hideSuggestions()
             }
-        }, 200)
+        })()
     })
 
     searchInput.addEventListener("focus", () => {
+        const hasHistory = getSearchHistory().length > 0
+
         if (!searchInput.value.trim()) {
-            renderSearchHistoryTerms(getSearchHistory())
+            if (hasHistory) {
+                searchInput.style.borderRadius = "30px 30px 0 0"
+                renderSearchHistoryTerms(getSearchHistory())
+            } else {
+                searchInput.style.borderRadius = "30px"
+                renderHistorySuggestions([], "")
+            }
         }
     })
 
@@ -852,23 +888,31 @@ function preventSelectionAndDrag() {
     document.addEventListener("selectstart", (e) => e.preventDefault())
 }
 
-async function init() {
-    await ensureUsername()
-    initAudioControls()
-    initSettings()
-    initSearch()
-    initGlobalClickHandlers()
-    preventSelectionAndDrag()
+async function initVersion() {
+    const versionElement = $("version")
 
     try {
         const v = await fetchVersion()
         const latest = await fetchLatestVersion()
 
-        document.getElementById("version").textContent =
-            `v${v} - ${latest && v !== latest ? `최신버전: v${latest}` : "최신 버전이에요!"}`
+        versionElement.textContent = `v${v} - ${latest && v !== latest ? `최신버전: v${latest}` : "최신 버전이에요!"}`
     } catch {
-        document.getElementById("version").textContent = "vUnknown"
+        versionElement.textContent = "vUnknown"
+    } finally {
+        versionElement.addEventListener("click", () => {
+            initVersion()
+        })
     }
+}
+
+async function init() {
+    await ensureUsername()
+    await initVersion()
+    initAudioControls()
+    initSettings()
+    initSearch()
+    initGlobalClickHandlers()
+    preventSelectionAndDrag()
 
     const toggle = $("toggleSwitch-1")
     if (toggle) {
@@ -886,13 +930,6 @@ async function init() {
                 STORAGE_KEYS.AUTO_UPDATE,
                 state.isAutoUpdateEnabled ? "true" : "false",
             )
-            showNotification(
-                state.isAutoUpdateEnabled
-                    ? "자동 업데이트 확인을 켰어요."
-                    : "자동 업데이트 확인을 껐어요.",
-                "info",
-                5,
-            )
             if (state.isAutoUpdateEnabled) {
                 checkUpdate()
             }
@@ -907,11 +944,6 @@ async function init() {
             setStorage(
                 STORAGE_KEYS.GREETING_ENABLED,
                 state.isGreetingEnabled ? "true" : "false",
-            )
-            showNotification(
-                state.isGreetingEnabled ? "대사를 켰어요." : "대사를 껐어요.",
-                "info",
-                5,
             )
 
             if (state.isGreetingEnabled) {

@@ -113,20 +113,40 @@ body {
     position: absolute;
     top: 100%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(-10px);
     width: 100%;
     max-width: 640px;
-    max-height: 260px;
-    overflow: auto;
+    max-height: 0;
+    overflow: hidden;
     border-radius: 0 0 30px 30px;
     backdrop-filter: blur(14px);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
-    padding: 10px 0;
+    padding: 0;
+    opacity: 0;
     z-index: 100;
+    transition:
+        opacity 180ms ease,
+        transform 180ms ease,
+        max-height 180ms ease,
+        padding 180ms ease;
+    pointer-events: none;
+}
+
+.history-suggestions.visible {
+    max-height: 260px;
+    padding: 10px 0;
+    overflow: auto;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
 }
 
 .history-suggestions.hidden {
-    display: none;
+    max-height: 0;
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+    padding: 0;
+    pointer-events: none;
 }
 
 .history-suggestions .item {
@@ -503,7 +523,9 @@ a:hover {
 
 .audioControlWrapper,
 .nameWrapper,
-.footerWrapper {
+.footerWrapper,
+.toggleWrapper,
+.versionWrapper {
     display: flex;
     align-items: center;
     gap: 8px;
