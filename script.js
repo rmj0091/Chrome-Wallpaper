@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
     AUTO_UPDATE: "autoUpdateCheck",
     GREETING_ENABLED: "greetingEnabled",
     SEARCH_HISTORY: "searchHistory",
+    FAVICONS: "faviconCache",
 }
 
 const DEFAULTS = {
@@ -72,6 +73,82 @@ function setStorage(key, value) {
 
 function setStorageJSON(key, value) {
     localStorage.setItem(key, JSON.stringify(value))
+}
+
+function getDomainFromUrl(url) {
+    try {
+        return new URL(url).hostname
+    } catch {
+        return null
+    }
+}
+
+function getFaviconCache() {
+    return safeParseJSON(localStorage.getItem(STORAGE_KEYS.FAVICONS), {})
+}
+
+function getCachedFavicon(domain) {
+    if (!domain) return null
+    const cache = getFaviconCache()
+    return cache[domain] || null
+}
+
+function setCachedFavicon(domain, dataUrl) {
+    if (!domain || !dataUrl) return
+    const cache = getFaviconCache()
+    cache[domain] = dataUrl
+    localStorage.setItem(STORAGE_KEYS.FAVICONS, JSON.stringify(cache))
+}
+
+function createFaviconUrl(domain, size = 32) {
+    if (!domain) return ""
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
+}
+
+function getFaviconSync(url) {
+    const domain = getDomainFromUrl(url)
+    if (!domain) return ""
+
+    const cached = getCachedFavicon(domain)
+    if (cached) return cached
+
+    return createFaviconUrl(domain, 32)
+}
+
+function blobToDataURL(blob) {
+    return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+    })
+}
+
+async function fetchAndCacheFavicon(domain) {
+    if (!domain || !navigator.onLine) return null
+
+    const faviconUrl = createFaviconUrl(domain, 64)
+    try {
+        const response = await fetch(faviconUrl, { mode: "no-cors" })
+        if (!response.ok && response.type !== "opaque") return null
+        const blob = await response.blob()
+        if (!blob || blob.size === 0) return null
+
+        const dataUrl = await blobToDataURL(blob)
+        if (dataUrl) setCachedFavicon(domain, dataUrl)
+        return dataUrl
+    } catch {
+        return null
+    }
+}
+
+async function ensureFaviconCached(url) {
+    const domain = getDomainFromUrl(url)
+    if (!domain) return null
+
+    const existing = getCachedFavicon(domain)
+    if (existing) return existing
+
+    return await fetchAndCacheFavicon(domain)
 }
 
 async function loadConfig() {
@@ -212,9 +289,28 @@ function renderHistorySuggestions(items, query = "") {
           }
         : null
 
-    const historyItems = (items || [])
+    let historyItems = (items || [])
         .filter(Boolean)
         .sort((a, b) => (b.lastVisitTime || 0) - (a.lastVisitTime || 0))
+
+    let historyFilter = historyItems
+
+    historyFilter = historyFilter.filter((v, i, self) => {
+        const isGoogleSearch = v.url.includes("google.com/search")
+        if (isGoogleSearch) {
+            return (
+                i ===
+                self.findIndex(
+                    (t) =>
+                        t.url.includes("google.com/search") &&
+                        t.title === v.title,
+                )
+            )
+        }
+        return true
+    })
+
+    historyItems = historyFilter
 
     const seenUrls = new Set()
     if (googleSearchItem) {
@@ -244,15 +340,6 @@ function renderHistorySuggestions(items, query = "") {
         if (item.isSearch) return "search"
         if (item.lastVisitTime) return "history"
         return "public"
-    }
-
-    const createFavicon = (url) => {
-        try {
-            const hostname = new URL(url).hostname
-            return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
-        } catch {
-            return ""
-        }
     }
 
     // 구글 검색 항목은 항상 최상단에 표시
@@ -285,7 +372,7 @@ function renderHistorySuggestions(items, query = "") {
         const isGoogleSearchUrl = url.startsWith(
             "https://www.google.com/search",
         )
-        const faviconUrl = createFavicon(url)
+        const faviconUrl = isGoogleSearchUrl ? "" : getFaviconSync(url)
 
         entry.innerHTML = `
             ${
@@ -305,6 +392,17 @@ function renderHistorySuggestions(items, query = "") {
             performSearch(url)
             renderHistorySuggestions([], "")
         })
+
+        if (!isGoogleSearchUrl) {
+            ensureFaviconCached(url).then((dataUrl) => {
+                if (dataUrl) {
+                    const img = entry.querySelector("img.favicon")
+                    if (img) {
+                        img.src = dataUrl
+                    }
+                }
+            })
+        }
 
         container.appendChild(entry)
     })
@@ -543,20 +641,32 @@ function createShortcuts() {
         shortcuts.forEach((link) => {
             const element = document.createElement("div")
             element.className = "link"
+
+            const domain = getDomainFromUrl(link.url)
+            const cachedFavicon = getCachedFavicon(domain)
+            const fallbackFavicon = createFaviconUrl(domain, 48)
+            const faviconUrl = cachedFavicon || fallbackFavicon
+
             element.innerHTML = `
                 <a href="${link.url}" rel="noopener noreferrer" title="${link.url}" class="shortcutLink">
-                    ${
-                        navigator.onLine
-                            ? `<img src="https://www.google.com/s2/favicons?domain=${link.url}&sz=48" />`
-                            : `<img style="background-color: #fff0; border: none;" />`
-                    }
+                    <img src="${faviconUrl}" alt="" />
                     <p>${link.name}</p>
                 </a>
                 <a class="removeLink" title="Delete ${link.name} shortcut" data-url="${link.url}">
                     <span class="material-symbols-outlined">close</span>
                 </a>
             `
+
             container.appendChild(element)
+
+            if (!cachedFavicon && domain && navigator.onLine) {
+                ensureFaviconCached(link.url).then((dataUrl) => {
+                    if (dataUrl) {
+                        const img = element.querySelector("img")
+                        if (img) img.src = dataUrl
+                    }
+                })
+            }
         })
 
         const addElement = document.createElement("div")
@@ -722,6 +832,8 @@ function renderSearchHistoryTerms(terms) {
         container.classList.add("hidden")
         return
     }
+
+    terms = terms.filter((v, i) => terms.indexOf(v) === i)
 
     container.classList.remove("hidden")
     container.classList.add("visible")
