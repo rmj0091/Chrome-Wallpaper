@@ -201,7 +201,9 @@ function fetchVersion() {
 }
 
 function fetchLatestVersion() {
-    return fetch(DEFAULTS.UPDATE_URL)
+    return fetch(DEFAULTS.UPDATE_URL, {
+        cache: "no-store",
+    })
         .then((res) => res.json())
         .then((data) => data.version)
         .catch(() => null)
