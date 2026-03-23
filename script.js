@@ -805,8 +805,14 @@ function initSettings() {
     saveBtn.addEventListener("click", handleNameUpdate)
 
     $("removeAllSearch").addEventListener("click", () => {
-        removeAllSearchHistory()
-        showNotification("모든 검색 기록을 제거했어요.", "info", 5)
+        if (
+            confirm(
+                "정말 모든 검색 기록을 제거하시겠어요? 이 작업은 되돌릴 수 없어요.",
+            )
+        ) {
+            removeAllSearchHistory()
+            showNotification("모든 검색 기록을 제거했어요.", "info", 5)
+        }
     })
 }
 
