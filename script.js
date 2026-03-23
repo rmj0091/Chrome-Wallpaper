@@ -294,7 +294,6 @@ function renderHistorySuggestions(items, query = "") {
     let historyItems = (items || [])
         .filter(Boolean)
         .sort((a, b) => (b.lastVisitTime || 0) - (a.lastVisitTime || 0))
-
     let historyFilter = historyItems
 
     historyFilter = historyFilter.filter((v, i, self) => {
@@ -311,6 +310,10 @@ function renderHistorySuggestions(items, query = "") {
         }
         return true
     })
+    historyFilter = historyFilter.filter(
+        (v, i, self) =>
+            i === self.findIndex((t) => t.url === v.url && t.title === v.title),
+    )
 
     historyItems = historyFilter
 
